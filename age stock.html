@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANX — Stock Intelligence v4</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c10;--bg2:#111419;--bg3:#181c23;--bg4:#1e2330;
+  --border:#252b35;--border2:#2e3645;
+  --text:#e8ecf0;--text2:#8a95a3;--text3:#5a6470;
+  --accent:#00d4aa;--accent2:#0099ff;--accent3:#ff6b35;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --c0:#00d4aa;--c0bg:rgba(0,212,170,.12);
+  --c1:#4fc3f7;--c1bg:rgba(79,195,247,.12);
+  --c2:#81c784;--c2bg:rgba(129,199,132,.12);
+  --c3:#aed581;--c3bg:rgba(174,213,129,.12);
+  --c4:#e6d44a;--c4bg:rgba(230,212,74,.12);
+  --c5:#ffb74d;--c5bg:rgba(255,183,77,.12);
+  --c6:#ff8a65;--c6bg:rgba(255,138,101,.12);
+  --c7:#f06292;--c7bg:rgba(240,98,146,.12);
+  --c8:#ef5350;--c8bg:rgba(239,83,80,.12);
+  --c9:#b71c1c;--c9bg:rgba(183,28,28,.14);
+}
+[data-theme="light"]{
+  --bg:#f4f6f9;--bg2:#ffffff;--bg3:#eef1f5;--bg4:#e4e8ef;
+  --border:#dde2ea;--border2:#c8d0db;
+  --text:#1a2233;--text2:#4a5568;--text3:#8a95a8;
+  --shadow:0 4px 24px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;min-height:100vh;transition:background .3s,color .3s}
+
+/* ── UPLOAD ── */
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;background:radial-gradient(ellipse at 50% 30%,rgba(0,150,255,.08) 0%,transparent 70%)}
+.upload-logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
+.upload-title{font-size:32px;font-weight:700;margin-bottom:8px}
+.upload-sub{color:var(--text3);font-size:14px;margin-bottom:40px}
+.upload-box{width:480px;border:1.5px dashed var(--border2);border-radius:16px;padding:48px 32px;text-align:center;cursor:pointer;transition:all .3s;background:var(--bg2)}
+.upload-box:hover,.upload-box.drag-over{border-color:var(--accent);background:rgba(0,212,170,.05);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,212,170,.15)}
+.upload-icon{font-size:48px;margin-bottom:16px;display:block}
+.upload-box p{color:var(--text2);margin-bottom:8px}
+.upload-box small{color:var(--text3);font-size:11px}
+.upload-btn-label{display:inline-block;margin-top:20px;padding:10px 28px;background:var(--accent);color:#000;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s}
+.upload-btn-label:hover{opacity:.85}
+#file-input{display:none}
+.sheet-selector{margin-top:24px;display:none;flex-direction:column;gap:12px;width:480px}
+.sheet-selector label{color:var(--text2);font-size:12px;letter-spacing:1px;text-transform:uppercase}
+.sheet-selector select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 16px;border-radius:8px;font-family:inherit;font-size:14px;outline:none}
+.load-btn{padding:12px 32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#000;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;align-self:flex-start}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;flex-direction:column;height:100vh;overflow:hidden}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
+.topbar-brand{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent);letter-spacing:2px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-file{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icon-btn{padding:5px 12px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn.active{background:rgba(0,212,170,.12);border-color:var(--accent);color:var(--accent)}
+.icon-btn.danger:hover{border-color:var(--accent3);color:var(--accent3)}
+.export-btn{background:rgba(0,212,170,.08);border-color:rgba(0,212,170,.25);color:var(--accent)}
+.export-btn:hover{background:rgba(0,212,170,.18)!important}
+
+/* VIEW SWITCHER */
+.view-switcher{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.view-tab{padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s;letter-spacing:.5px}
+.view-tab.active{background:var(--accent);color:#000}
+
+/* STICKY ZONE */
+.sticky-zone{background:var(--bg2);border-bottom:2px solid var(--border2);flex-shrink:0;z-index:50}
+
+/* FILTERS */
+.filters-section{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:3px}
+.filter-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)}
+.filter-select,.filter-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-family:inherit;font-size:12px;outline:none;cursor:pointer;transition:border-color .2s}
+.filter-select:focus,.filter-input:focus{border-color:var(--accent)}
+.price-inputs{display:flex;gap:5px}
+.price-inputs .filter-input{width:80px}
+.clear-btn{padding:5px 12px;background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s;align-self:flex-end;height:29px}
+.clear-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* KPI BAR */
+.kpi-bar{padding:8px 20px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.kpi-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:7px 14px;display:flex;flex-direction:column;gap:2px;min-width:130px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.kblue::before{background:var(--accent2)}
+.kpi-card.kgreen::before{background:var(--accent)}
+.kpi-card.korange::before{background:var(--accent3)}
+.kpi-card.kred::before{background:#ef5350}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)}
+.kpi-value{font-size:17px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.kpi-sub{font-size:10px;color:var(--text3)}
+
+/* AGE DIST */
+.age-dist{display:flex;gap:5px;align-items:center;padding:7px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.age-label-txt{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-right:4px;flex-shrink:0}
+.age-pill{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid transparent;white-space:nowrap; user-select: none;}
+.age-pill .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.age-pill.active{box-shadow:0 0 0 2px currentColor}
+.progress-bar{flex:1;height:4px;background:var(--bg4);border-radius:3px;overflow:hidden;display:flex;min-width:100px}
+.progress-seg{height:100%;transition:width .5s}
+.results-count{padding:5px 20px;font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.results-count em{color:var(--accent);font-style:normal;font-weight:600}
+
+/* ── TABLE VIEW ── */
+.table-zone{flex:1;overflow-y:auto;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;z-index:20}
+thead tr{background:var(--bg4);border-bottom:2px solid var(--border2)}
+th{padding:8px 12px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);white-space:nowrap;cursor:pointer;user-select:none;transition:color .2s;border-right:1px solid var(--border)}
+th:hover{color:var(--accent)}
+th:last-child{border-right:none}
+th.sorted{color:var(--accent)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:hover{background:rgba(0,212,170,.03)}
+[data-theme="light"] tbody tr:hover{background:rgba(0,212,170,.06)}
+td{padding:7px 12px;white-space:nowrap;color:var(--text2);border-right:1px solid var(--border);vertical-align:middle}
+td:last-child{border-right:none}
+td.primary{color:var(--text);font-weight:500}
+td.mono{font-family:'IBM Plex Mono',monospace;font-size:11px}
+.anx-chip{display:inline-block;padding:2px 7px;background:rgba(0,153,255,.1);border:1px solid rgba(0,153,255,.2);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent2)}
+.gamm-chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.stock-val{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;color:var(--accent2)}
+.price-val{font-family:'IBM Plex Mono',monospace;font-size:11px}
+.age-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.age-badge .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.age-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);display:block;margin-top:1px}
+.g-electro{background:var(--c0bg);color:var(--c0)}
+.g-info{background:rgba(0,153,255,.12);color:var(--accent2)}
+.g-tv{background:rgba(255,107,53,.12);color:var(--accent3)}
+.g-meuble{background:var(--c5bg);color:var(--c5)}
+.g-pem{background:rgba(167,139,250,.12);color:#a78bfa}
+.g-other{background:rgba(100,116,139,.1);color:#94a3b8}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.obs-cell {cursor: pointer; position: relative; color: var(--accent2); font-weight: 500; min-width: 140px;}
+.obs-cell:hover {background: rgba(0,153,255,0.1);}
+.obs-cell select {background: var(--bg3); border: 1px solid var(--accent2); color: var(--text); padding: 4px; border-radius: 4px; outline: none; font-family: inherit; width: 100%;}
+
+/* ── TREE VIEW ── */
+#tree-view{flex:1;overflow:hidden;display:none;flex-direction:column}
+.tree-controls{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg2)}
+.tree-ctrl-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)}
+.metric-tabs{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.metric-tab{padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s}
+.metric-tab.active{background:var(--accent2);color:#fff}
+
+/* COLUMN ORDER DRAG */
+.col-order{display:flex;gap:6px;align-items:center}
+.col-chip{padding:4px 10px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-weight:600;cursor:grab;background:var(--bg3);color:var(--text2);user-select:none;transition:all .2s;display:flex;align-items:center;gap:4px}
+.col-chip:hover{border-color:var(--accent);color:var(--accent)}
+.col-chip.dragging{opacity:.4;cursor:grabbing}
+.col-chip .drag-handle{font-size:10px;opacity:.5}
+
+/* TREE CANVAS ZONE */
+.tree-canvas-zone{flex:1;overflow:auto;padding:20px}
+#tree-svg-container{min-width:600px}
+
+/* NODE STYLES */
+.tree-node-root{fill:var(--bg3);stroke:var(--accent);stroke-width:1.5}
+.tree-node-l1{fill:var(--bg3);stroke:var(--accent2);stroke-width:1}
+.tree-node-l2{fill:var(--bg3);stroke:var(--border2);stroke-width:.8}
+.tree-node-l3{fill:var(--bg4);stroke:var(--border);stroke-width:.6}
+.tree-edge{fill:none;stroke:var(--border2);stroke-width:.8}
+.tree-text-main{font-family:'Plus Jakarta Sans',sans-serif;fill:var(--text);font-size:12px;font-weight:600}
+.tree-text-sub{font-family:'IBM Plex Mono',monospace;fill:var(--text2);font-size:10px}
+.tree-text-pct{font-family:'IBM Plex Mono',monospace;fill:var(--accent);font-size:10px;font-weight:600}
+.tree-bar-bg{fill:var(--bg4)}
+
+/* MODAL SETTINGS */
+.modal-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px);}
+.modal-content {background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 400px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 16px;}
+.modal-title {font-size: 16px; font-weight: 700; color: var(--text);}
+.modal-content textarea {width: 100%; height: 150px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 8px; font-family: inherit; font-size: 13px; resize: none; outline: none;}
+.modal-content textarea:focus {border-color: var(--accent);}
+.modal-content p {font-size: 11px; color: var(--text3);}
+.modal-actions {display: flex; justify-content: flex-end; gap: 8px;}
+.modal-btn {padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 12px;}
+.modal-btn.cancel {background: var(--bg3); color: var(--text); border: 1px solid var(--border);}
+.modal-btn.save {background: var(--accent); color: #000;}
+
+/* EXPORT TOAST */
+#export-toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:12px;color:var(--text);display:none;align-items:center;gap:10px;z-index:999;box-shadow:var(--shadow)}
+#export-toast.show{display:flex}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── SESSION SCREEN ── */
+#session-screen{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;padding:48px 32px;background:radial-gradient(ellipse at 50% 20%,rgba(0,150,255,.08) 0%,transparent 65%)}
+.session-logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--accent);margin-bottom:32px;text-transform:uppercase}
+.session-header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:860px;margin-bottom:28px}
+.session-title{font-size:26px;font-weight:700}
+.session-title span{color:var(--accent2)}
+.session-actions{display:flex;gap:10px;align-items:center}
+.sess-new-btn{padding:9px 22px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#000;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s}
+.sess-new-btn:hover{opacity:.85;transform:translateY(-1px)}
+.sess-theme-btn{padding:7px 12px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.sess-theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+.sessions-grid{width:100%;max-width:860px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.session-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.session-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .2s}
+.session-card:hover{border-color:var(--accent2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,153,255,.12)}
+.session-card:hover::before{opacity:1}
+.sess-card-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-card-file{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.sess-meta-tag{font-size:10px;padding:2px 8px;border-radius:12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
+.sess-card-date{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.sess-card-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.sess-open-btn{flex:1;padding:6px;background:rgba(0,153,255,.1);border:1px solid rgba(0,153,255,.2);color:var(--accent2);border-radius:6px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.sess-open-btn:hover{background:rgba(0,153,255,.22)}
+.sess-del-btn{padding:6px 10px;background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s}
+.sess-del-btn:hover{border-color:#ef5350;color:#ef5350}
+.sess-rename-btn{padding:6px 10px;background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s}
+.sess-rename-btn:hover{border-color:var(--accent);color:var(--accent)}
+.no-sessions{text-align:center;padding:60px 20px;color:var(--text3);grid-column:1/-1}
+.no-sessions .ns-icon{font-size:48px;margin-bottom:16px}
+.no-sessions p{font-size:14px;margin-bottom:8px}
+.no-sessions small{font-size:12px;color:var(--text3)}
+.sess-save-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 24px;display:none;align-items:center;justify-content:space-between;z-index:200;gap:12px}
+.sess-save-bar.visible{display:flex}
+.sess-save-bar-left{display:flex;align-items:center;gap:10px;flex:1}
+.sess-save-name{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;width:220px}
+.sess-save-name:focus{border-color:var(--accent)}
+.sess-save-btn{padding:8px 20px;background:var(--accent);border:none;border-radius:8px;color:#000;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.sess-save-btn:hover{opacity:.85}
+.sess-indicator{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.sess-indicator em{color:var(--accent);font-style:normal}
+.sess-go-sessions{padding:7px 14px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:7px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s}
+.sess-go-sessions:hover{border-color:var(--accent);color:var(--accent)}
+/* rename modal */
+.rename-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1200;backdrop-filter:blur(4px)}
+.rename-modal-overlay.open{display:flex}
+.rename-modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:360px;display:flex;flex-direction:column;gap:14px}
+.rename-modal-box h3{font-size:15px;font-weight:700}
+.rename-modal-box input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:8px;font-family:inherit;font-size:14px;outline:none;width:100%}
+.rename-modal-box input:focus{border-color:var(--accent)}
+.rename-modal-actions{display:flex;justify-content:flex-end;gap:8px}
+.rm-cancel{padding:8px 16px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-family:inherit;cursor:pointer;font-size:12px}
+.rm-save{padding:8px 16px;background:var(--accent);border:none;color:#000;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- SESSION SCREEN -->
+<div id="session-screen">
+  <div class="session-logo">ANX · Stock Intelligence</div>
+  <div class="session-header">
+    <div>
+      <div class="session-title">Mes <span>Sessions</span></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">Reprenez une session existante ou démarrez une nouvelle analyse</div>
+    </div>
+    <div class="session-actions">
+      <button class="sess-theme-btn" id="sess-theme-btn" onclick="toggleThemeSession()">🌙</button>
+      <button class="sess-new-btn" onclick="goToUpload()">＋ Nouvelle Session</button>
+    </div>
+  </div>
+  <div class="sessions-grid" id="sessions-grid">
+    <!-- rendered by JS -->
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div class="rename-modal-overlay" id="rename-modal">
+  <div class="rename-modal-box">
+    <h3>✏️ Renommer la session</h3>
+    <input type="text" id="rename-input" placeholder="Nom de la session…" maxlength="60">
+    <div class="rename-modal-actions">
+      <button class="rm-cancel" onclick="closeRenameModal()">Annuler</button>
+      <button class="rm-save" onclick="confirmRename()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD SCREEN -->
+<div id="upload-screen" style="display:none">
+  <div class="upload-logo">ANX · Stock Intelligence</div>
+  <h1 class="upload-title">Nouvelle Analyse</h1>
+  <p class="upload-sub">Importez votre fichier Excel pour démarrer</p>
+  <div class="upload-box" id="drop-zone">
+    <span class="upload-icon">📊</span>
+    <p>Glissez votre fichier ici</p>
+    <small>.xlsx / .xls / .csv acceptés</small>
+    <label class="upload-btn-label" for="file-input">Choisir un fichier</label>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+  </div>
+  <div class="sheet-selector" id="sheet-selector">
+    <label>Choisir la feuille</label>
+    <select id="sheet-select"></select>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase">Nom de la session (optionnel)</label>
+      <input type="text" id="session-name-input" placeholder="Ex: Stock Avril 2026…" maxlength="60" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 14px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;width:100%">
+    </div>
+    <button class="load-btn" id="load-btn">Charger →</button>
+  </div>
+  <button onclick="goToSessions()" style="margin-top:20px;background:transparent;border:none;color:var(--text3);font-family:inherit;font-size:12px;cursor:pointer;text-decoration:underline">← Retour aux sessions</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-brand">ANX · STOCK</div>
+    <div class="topbar-right">
+      <span class="topbar-file" id="file-name-display"></span>
+
+      <!-- VIEW SWITCHER -->
+      <div class="view-switcher">
+        <button class="view-tab active" id="tab-table" onclick="switchView('table')">☰ Tableau</button>
+        <button class="view-tab" id="tab-tree" onclick="switchView('tree')">⎇ Arbre</button>
+      </div>
+
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
+      <button class="icon-btn" onclick="openSettings()" title="Paramètres (Observations)">⚙️</button>
+      <button class="icon-btn export-btn" onclick="exportExcel()">⬇ Excel</button>
+      <button class="icon-btn danger" onclick="resetDashboard()">↩</button>
+    </div>
+  </div>
+
+  <!-- STICKY ZONE -->
+  <div class="sticky-zone">
+    <!-- FILTERS -->
+    <div class="filters-section">
+      <div class="filter-group" style="flex: 1; min-width: 130px;">
+        <span class="filter-label">Recherche</span>
+        <input class="filter-input" id="f-search" type="text" placeholder="ref+des">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">ANX</span>
+        <select class="filter-select" id="f-anx" style="min-width:70px"><option value="">Toutes</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Gamme</span>
+        <select class="filter-select" id="f-gamm" style="min-width:100px"><option value="">Toutes</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Prod</span>
+        <select class="filter-select" id="f-prod" style="min-width:70px"><option value="">Toutes</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Observation</span>
+        <select class="filter-select" id="f-obs" style="min-width:110px"><option value="">Toutes</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Catégorie âge</span>
+        <select class="filter-select" id="f-age" style="min-width:110px"><option value="">Toutes</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Depuis</span>
+        <select class="filter-select" id="f-period" style="min-width:80px">
+          <option value="">Toutes</option>
+          <option value="2024">2024+</option><option value="2023">2023+</option>
+          <option value="2022">2022+</option><option value="2020">2020+</option>
+          <option value="2018">2018+</option><option value="2015">2015+</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Prix DA</span>
+        <div class="price-inputs">
+          <input class="filter-input" id="f-price-min" type="number" placeholder="Min" style="width:60px">
+          <input class="filter-input" id="f-price-max" type="number" placeholder="Max" style="width:60px">
+        </div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Stock ≥</span>
+        <input class="filter-input" id="f-stock-min" type="number" placeholder="0" style="width:50px">
+      </div>
+      <button class="clear-btn" onclick="clearFilters()">✕</button>
+    </div>
+
+    <!-- KPI BAR -->
+    <div class="kpi-bar">
+      <div class="kpi-card kblue">
+        <span class="kpi-label">Références</span>
+        <span class="kpi-value" id="kpi-refs">–</span>
+        <span class="kpi-sub" id="kpi-refs-pct">–</span>
+      </div>
+      <div class="kpi-card kgreen">
+        <span class="kpi-label">Quantité</span>
+        <span class="kpi-value" id="kpi-qty">–</span>
+        <span class="kpi-sub" id="kpi-qty-pct">–</span>
+      </div>
+      <div class="kpi-card korange">
+        <span class="kpi-label">Valeur Stock</span>
+        <span class="kpi-value" id="kpi-value">–</span>
+        <span class="kpi-sub" id="kpi-value-pct">–</span>
+      </div>
+      <div class="kpi-card kred">
+        <span class="kpi-label">Âge Moyen</span>
+        <span class="kpi-value" id="kpi-age">–</span>
+        <span class="kpi-sub" id="kpi-age-label">–</span>
+      </div>
+      <div class="kpi-card" style="border-top:2px solid var(--c9)">
+        <span class="kpi-label">+ Ancien</span>
+        <span class="kpi-value" id="kpi-oldest" style="font-size:13px">–</span>
+        <span class="kpi-sub" id="kpi-oldest-ref">–</span>
+      </div>
+    </div>
+
+    <!-- AGE DISTRIBUTION -->
+    <div class="age-dist" id="age-dist-bar">
+      <span class="age-label-txt" title="Maintenez Ctrl pour une sélection multiple">Répartition :</span>
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div class="results-count">
+      <em id="count-filtered">–</em> / <em id="count-total">–</em> produits &nbsp;·&nbsp;
+      valeur : <em id="count-value">–</em> DA &nbsp;·&nbsp;
+      qté : <em id="count-qty2">–</em>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div class="table-zone" id="table-view">
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th onclick="sortBy('PROD',this)">PROD<span> ↕</span></th>
+          <th onclick="sortBy('REF',this)">REF<span> ↕</span></th>
+          <th onclick="sortBy('designation',this)" style="min-width:250px">DÉSIGNATION<span> ↕</span></th>
+          <th onclick="sortBy('GAMM',this)">GAMME<span> ↕</span></th>
+          <th onclick="sortBy('ANX',this)">ANX<span> ↕</span></th>
+          <th onclick="sortBy('DrPrixAchat',this)">PRIX DA<span> ↕</span></th>
+          <th onclick="sortBy('Stock',this)">QTÉ<span> ↕</span></th>
+          <th onclick="sortBy('valeur',this)">VALEUR DA<span> ↕</span></th>
+          <th onclick="sortBy('DrdateAchat',this)">DATE<span> ↕</span></th>
+          <th onclick="sortBy('ageDays',this)" style="min-width:140px">ÂGE / STATUT<span> ↕</span></th>
+          <th>OBSERVATION (Dbl-Clic)</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- TREE VIEW -->
+  <div id="tree-view">
+    <!-- TREE CONTROLS -->
+    <div class="tree-controls">
+      <span class="tree-ctrl-label">Métrique :</span>
+      <div class="metric-tabs">
+        <button class="metric-tab active" onclick="setMetric('value',this)">💰 Valeur DA</button>
+        <button class="metric-tab" onclick="setMetric('qty',this)">📦 Quantité</button>
+        <button class="metric-tab" onclick="setMetric('pct',this)">% Proportion</button>
+      </div>
+      <button class="icon-btn export-btn" onclick="downloadChart('tree-svg-container')">⬇ Image</button>
+
+      <span class="tree-ctrl-label" style="margin-left:12px">Ordre des niveaux :</span>
+      <div class="col-order" id="col-order">
+        <!-- rendered by JS -->
+      </div>
+
+      <span style="font-size:10px;color:var(--text3);margin-left:6px">↔ glisser pour réorganiser</span>
+    </div>
+
+    <!-- TREE CANVAS -->
+    <div class="tree-canvas-zone">
+      <div id="tree-svg-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SETTINGS (OBSERVATIONS) -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-content">
+    <div class="modal-title">⚙️ Paramètres des Observations</div>
+    <p>Ajoutez ou modifiez les expressions prédéfinies (une par ligne) :</p>
+    <textarea id="obs-textarea"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeSettings()">Annuler</button>
+      <button class="modal-btn save" onclick="saveSettings()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="export-toast"><span>⏳</span><span id="toast-msg">Préparation…</span></div>
+
+<!-- SESSION SAVE BAR -->
+<div class="sess-save-bar" id="sess-save-bar">
+  <div class="sess-save-bar-left">
+    <span class="sess-indicator">Session : <em id="sess-current-name">Non enregistrée</em></span>
+    <input type="text" class="sess-save-name" id="sess-save-name" placeholder="Nom de la session…" maxlength="60">
+    <button class="sess-save-btn" onclick="saveCurrentSession()">💾 Sauvegarder</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace" id="sess-auto-label"></span>
+    <button class="sess-go-sessions" onclick="goToSessions()">☰ Sessions</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   SESSION MANAGER — ANX Stock Intelligence
+   Storage: localStorage (clé: anx_sessions)
+   Chaque session contient:
+     id, name, fileName, savedAt, filters, observations,
+     obsOptions, activeAgeFilters, sortCol, sortDir, theme,
+     rawDataSnapshot (JSON compact des lignes brutes)
+═══════════════════════════════════════════════════════ */
+
+const SESSION_KEY = 'anx_sessions';
+const MAX_SESSION_SIZE = 4 * 1024 * 1024; // 4 MB par session
+
+let currentSessionId = null;
+let currentFileName  = '';
+let _pendingRenameId = null;
+
+/* ── Helpers ── */
+function genId() {
+  return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+function getAllSessions() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+  } catch(e) { return []; }
+}
+function saveSessions(arr) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(arr));
+}
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+}
+
+/* ── Navigation ── */
+function goToSessions() {
+  document.getElementById('session-screen').style.display  = 'flex';
+  document.getElementById('upload-screen').style.display   = 'none';
+  document.getElementById('dashboard').style.display       = 'none';
+  document.getElementById('sess-save-bar').classList.remove('visible');
+  renderSessionsGrid();
+}
+function goToUpload() {
+  document.getElementById('session-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display  = 'flex';
+  document.getElementById('sheet-selector').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  currentSessionId = null;
+  currentFileName  = '';
+}
+
+/* ── Render Sessions Grid ── */
+function renderSessionsGrid() {
+  const grid = document.getElementById('sessions-grid');
+  const sessions = getAllSessions().sort((a,b) => b.savedAt - a.savedAt);
+
+  if (!sessions.length) {
+    grid.innerHTML = `<div class="no-sessions">
+      <div class="ns-icon">📂</div>
+      <p>Aucune session sauvegardée</p>
+      <small>Importez un fichier Excel pour commencer</small>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = sessions.map(s => {
+    const obsCount = Object.keys(s.observations || {}).length;
+    const refsCount = (s.rawDataSnapshot || []).length;
+    const filtersActive = Object.values(s.filters || {}).filter(v => v && v !== '' && (Array.isArray(v) ? v.length : true)).length;
+    return `<div class="session-card" onclick="loadSession('${s.id}')">
+      <div class="sess-card-name">📊 ${s.name || 'Session sans nom'}</div>
+      <div class="sess-card-file">📁 ${s.fileName || 'fichier inconnu'}</div>
+      <div class="sess-card-meta">
+        ${refsCount ? `<span class="sess-meta-tag">📦 ${refsCount} réf.</span>` : ''}
+        ${obsCount ? `<span class="sess-meta-tag">💬 ${obsCount} obs.</span>` : ''}
+        ${filtersActive ? `<span class="sess-meta-tag">🔍 ${filtersActive} filtre(s)</span>` : ''}
+      </div>
+      <div class="sess-card-date">🕐 ${fmtDate(s.savedAt)}</div>
+      <div class="sess-card-actions" onclick="event.stopPropagation()">
+        <button class="sess-open-btn" onclick="loadSession('${s.id}')">▶ Ouvrir</button>
+        <button class="sess-rename-btn" onclick="openRenameModal('${s.id}', event)">✏️</button>
+        <button class="sess-del-btn" onclick="deleteSession('${s.id}', event)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Collect current filter state ── */
+function collectFilters() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  return {
+    search:   get('f-search'),
+    anx:      get('f-anx'),
+    gamm:     get('f-gamm'),
+    prod:     get('f-prod'),
+    obs:      get('f-obs'),
+    age:      get('f-age'),
+    period:   get('f-period'),
+    priceMin: get('f-price-min'),
+    priceMax: get('f-price-max'),
+    stockMin: get('f-stock-min'),
+  };
+}
+
+/* ── Save current session ── */
+function saveCurrentSession() {
+  if (!rawData || !rawData.length) {
+    showToast('❌ Aucune donnée à sauvegarder', 2000);
+    return;
+  }
+  const nameInput = document.getElementById('sess-save-name');
+  const sessionName = (nameInput ? nameInput.value.trim() : '') ||
+                      currentFileName.replace(/\.[^.]+$/, '') ||
+                      'Session ' + new Date().toLocaleDateString('fr-FR');
+
+  // Build snapshot — strip computed _date/_lv objects to save space
+  const snapshot = rawData.map(r => {
+    const clean = {};
+    Object.keys(r).forEach(k => {
+      if (k !== '_date' && k !== '_lv') clean[k] = r[k];
+    });
+    return clean;
+  });
+
+  const sessionObj = {
+    id:              currentSessionId || genId(),
+    name:            sessionName,
+    fileName:        currentFileName,
+    savedAt:         Date.now(),
+    filters:         collectFilters(),
+    activeAgeFilters: activeAgeFilters.slice(),
+    sortCol:         sortCol,
+    sortDir:         sortDir,
+    theme:           darkTheme ? 'dark' : 'light',
+    observations:    JSON.parse(JSON.stringify(observationsStore)),
+    obsOptions:      observationOptions.slice(),
+    rawDataSnapshot: snapshot,
+  };
+
+  // Size check
+  const serialized = JSON.stringify(sessionObj);
+  if (serialized.length > MAX_SESSION_SIZE) {
+    showToast('⚠️ Session trop grande, observations seules sauvegardées', 3000);
+    sessionObj.rawDataSnapshot = [];
+  }
+
+  const sessions = getAllSessions().filter(s => s.id !== sessionObj.id);
+  sessions.unshift(sessionObj);
+  // Keep max 20 sessions
+  if (sessions.length > 20) sessions.splice(20);
+  saveSessions(sessions);
+
+  currentSessionId = sessionObj.id;
+  document.getElementById('sess-current-name').textContent = sessionName;
+  document.getElementById('sess-auto-label').textContent = '✅ ' + fmtDate(sessionObj.savedAt);
+  if (nameInput) nameInput.value = sessionName;
+  showToast('💾 Session "' + sessionName + '" sauvegardée', 2200);
+}
+
+/* ── Load session ── */
+function loadSession(id) {
+  const sessions = getAllSessions();
+  const s = sessions.find(ss => ss.id === id);
+  if (!s) { showToast('❌ Session introuvable', 2000); return; }
+
+  if (!s.rawDataSnapshot || !s.rawDataSnapshot.length) {
+    showToast('⚠️ Snapshot vide — veuillez recharger le fichier Excel', 3000);
+    // Still restore observations and go to upload
+    observationsStore  = s.observations  || {};
+    observationOptions = s.obsOptions    || observationOptions;
+    localStorage.setItem('anx_obs_store',   JSON.stringify(observationsStore));
+    localStorage.setItem('anx_obs_options', JSON.stringify(observationOptions));
+    currentSessionId = s.id;
+    currentFileName  = s.fileName || '';
+    goToUpload();
+    return;
+  }
+
+  // Restore state
+  currentSessionId   = s.id;
+  currentFileName    = s.fileName || '';
+  observationsStore  = s.observations  || {};
+  observationOptions = s.obsOptions    || observationOptions;
+  localStorage.setItem('anx_obs_store',   JSON.stringify(observationsStore));
+  localStorage.setItem('anx_obs_options', JSON.stringify(observationOptions));
+
+  // Restore theme
+  if (s.theme === 'light') {
+    darkTheme = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    const tb = document.getElementById('theme-btn');
+    if (tb) tb.textContent = '☀️';
+    const stb = document.getElementById('sess-theme-btn');
+    if (stb) stb.textContent = '☀️';
+  } else {
+    darkTheme = true;
+    document.documentElement.removeAttribute('data-theme');
+    const tb = document.getElementById('theme-btn');
+    if (tb) tb.textContent = '🌙';
+    const stb = document.getElementById('sess-theme-btn');
+    if (stb) stb.textContent = '🌙';
+  }
+
+  // Process raw data
+  rawData = processData(s.rawDataSnapshot);
+  totals  = {
+    refs:  rawData.length,
+    qty:   rawData.reduce((sum,r) => sum + (parseInt(r['Stock']) || 0), 0),
+    value: rawData.reduce((sum,r) => sum + r.valeur, 0),
+  };
+
+  // Sort
+  sortCol = s.sortCol || '';
+  sortDir = s.sortDir || 1;
+
+  // Age filters
+  activeAgeFilters = s.activeAgeFilters || [];
+
+  // Show dashboard
+  document.getElementById('session-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display  = 'none';
+  document.getElementById('dashboard').style.display      = 'flex';
+
+  // File name display
+  const fnd = document.getElementById('file-name-display');
+  if (fnd) fnd.textContent = currentFileName;
+
+  buildAgeFilter();
+  populateFilters();
+
+  // Restore filters after populate
+  const f = s.filters || {};
+  const setV = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setV('f-search',    f.search);
+  setV('f-anx',       f.anx);
+  setV('f-gamm',      f.gamm);
+  setV('f-prod',      f.prod);
+  setV('f-obs',       f.obs);
+  setV('f-age',       f.age);
+  setV('f-period',    f.period);
+  setV('f-price-min', f.priceMin);
+  setV('f-price-max', f.priceMax);
+  setV('f-stock-min', f.stockMin);
+
+  applyFilters();
+
+  // Show save bar
+  document.getElementById('sess-save-bar').classList.add('visible');
+  document.getElementById('sess-current-name').textContent = s.name || 'Session';
+  document.getElementById('sess-save-name').value          = s.name || '';
+  document.getElementById('sess-auto-label').textContent   = '🕐 ' + fmtDate(s.savedAt);
+
+  showToast('▶ Session "' + s.name + '" chargée', 2000);
+}
+
+/* ── Delete session ── */
+function deleteSession(id, e) {
+  if (e) e.stopPropagation();
+  const sessions = getAllSessions();
+  const s = sessions.find(ss => ss.id === id);
+  if (!s) return;
+  if (!confirm('Supprimer la session "' + (s.name || 'Sans nom') + '" ?')) return;
+  saveSessions(sessions.filter(ss => ss.id !== id));
+  renderSessionsGrid();
+}
+
+/* ── Rename modal ── */
+function openRenameModal(id, e) {
+  if (e) e.stopPropagation();
+  const sessions = getAllSessions();
+  const s = sessions.find(ss => ss.id === id);
+  if (!s) return;
+  _pendingRenameId = id;
+  document.getElementById('rename-input').value = s.name || '';
+  document.getElementById('rename-modal').classList.add('open');
+  setTimeout(() => document.getElementById('rename-input').focus(), 50);
+}
+function closeRenameModal() {
+  document.getElementById('rename-modal').classList.remove('open');
+  _pendingRenameId = null;
+}
+function confirmRename() {
+  if (!_pendingRenameId) return;
+  const newName = document.getElementById('rename-input').value.trim();
+  if (!newName) return;
+  const sessions = getAllSessions();
+  const s = sessions.find(ss => ss.id === _pendingRenameId);
+  if (s) {
+    s.name = newName;
+    saveSessions(sessions);
+    // if it's the current session, update save bar
+    if (_pendingRenameId === currentSessionId) {
+      document.getElementById('sess-current-name').textContent = newName;
+      document.getElementById('sess-save-name').value          = newName;
+    }
+  }
+  closeRenameModal();
+  renderSessionsGrid();
+}
+document.getElementById('rename-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmRename();
+  if (e.key === 'Escape') closeRenameModal();
+});
+
+/* ── Theme toggle on session screen ── */
+function toggleThemeSession() {
+  darkTheme = !darkTheme;
+  document.documentElement.setAttribute('data-theme', darkTheme ? '' : 'light');
+  document.getElementById('sess-theme-btn').textContent = darkTheme ? '🌙' : '☀️';
+  const tb = document.getElementById('theme-btn');
+  if (tb) tb.textContent = darkTheme ? '🌙' : '☀️';
+}
+
+/* ── Auto-save every 2 min if dashboard open ── */
+setInterval(() => {
+  if (document.getElementById('dashboard').style.display !== 'none' && rawData && rawData.length) {
+    saveCurrentSession();
+  }
+}, 2 * 60 * 1000);
+
+/* ── Init: show session screen ── */
+renderSessionsGrid();
+
+</script>
+
+<script>
+/* ══════════════════════════════════════════
+   OBSERVATIONS STORAGE & SETTINGS
+══════════════════════════════════════════ */
+let observationOptions = ['À vérifier', 'Défectueux', 'Retour Fournisseur', 'Destruction', 'Bon état'];
+let observationsStore = {}; 
+
+try {
+  const savedOpts = localStorage.getItem('anx_obs_options');
+  if (savedOpts) observationOptions = JSON.parse(savedOpts);
+  
+  const savedStore = localStorage.getItem('anx_obs_store');
+  if (savedStore) observationsStore = JSON.parse(savedStore);
+} catch(e) {}
+
+function openSettings() {
+  document.getElementById('obs-textarea').value = observationOptions.join('\n');
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+function saveSettings() {
+  const lines = document.getElementById('obs-textarea').value.split('\n').map(l => l.trim()).filter(l => l);
+  observationOptions = lines;
+  localStorage.setItem('anx_obs_options', JSON.stringify(observationOptions));
+  closeSettings();
+  
+  populateFilters(); // Update dropdown just in case
+  showToast("✅ Options enregistrées", 2000);
+}
+
+function editObs(ref, td) {
+  if(td.querySelector('select')) return; 
+  const currentVal = observationsStore[ref] || '';
+  
+  let html = `<select onblur="saveObs('${ref}', this)" onchange="saveObs('${ref}', this)">`;
+  html += `<option value="">-- Vider --</option>`;
+  observationOptions.forEach(opt => {
+    const sel = opt === currentVal ? 'selected' : '';
+    html += `<option value="${opt}" ${sel}>${opt}</option>`;
+  });
+  html += `</select>`;
+  
+  td.innerHTML = html;
+  td.querySelector('select').focus();
+}
+
+function saveObs(ref, selectEl) {
+  const val = selectEl.value;
+  if (val) {
+    observationsStore[ref] = val;
+  } else {
+    delete observationsStore[ref];
+  }
+  localStorage.setItem('anx_obs_store', JSON.stringify(observationsStore));
+  selectEl.parentElement.innerHTML = val || '—';
+  
+  // Re-populate filter list to include new selections
+  populateFilters();
+}
+
+/* ══════════════════════════════════════════
+   AGE LEVELS — 10 tiers
+══════════════════════════════════════════ */
+const AGE_LEVELS=[
+  {key:'a0',label:'Nouveau',       max:30,    color:'var(--c0)',bg:'var(--c0bg)',icon:'🟢'},
+  {key:'a1',label:'Récent 1-3m',  max:90,    color:'var(--c1)',bg:'var(--c1bg)',icon:'🔵'},
+  {key:'a2',label:'Moyen 3-6m',   max:180,   color:'var(--c2)',bg:'var(--c2bg)',icon:'🟩'},
+  {key:'a3',label:'6m – 1 an',    max:365,   color:'var(--c3)',bg:'var(--c3bg)',icon:'🟡'},
+  {key:'a4',label:'1 – 1.5 an',   max:548,   color:'var(--c4)',bg:'var(--c4bg)',icon:'🟨'},
+  {key:'a5',label:'1.5 – 2 ans',  max:730,   color:'var(--c5)',bg:'var(--c5bg)',icon:'🟠'},
+  {key:'a6',label:'2 – 3 ans',    max:1095,  color:'var(--c6)',bg:'var(--c6bg)',icon:'🟧'},
+  {key:'a7',label:'3 – 4 ans',    max:1460,  color:'var(--c7)',bg:'var(--c7bg)',icon:'🔴'},
+  {key:'a8',label:'4 – 5 ans',    max:1825,  color:'var(--c8)',bg:'var(--c8bg)',icon:'🔴'},
+  {key:'a9',label:'+ 5 ans',      max:Infinity,color:'var(--c9)',bg:'var(--c9bg)',icon:'⚫'},
+];
+function getLevel(d){for(const lv of AGE_LEVELS)if(d<lv.max)return lv;return AGE_LEVELS[9];}
+function fmtAge(d){if(d===null)return'–';const y=Math.floor(d/365),m=Math.floor((d%365)/30),dd=d%30;let s='';if(y)s+=y+'a ';if(m)s+=m+'m ';if(dd&&!y)s+=dd+'j';return s.trim()||'0j';}
+function fmtNum(v){if(v>=1e9)return(v/1e9).toFixed(2)+' Md';if(v>=1e6)return(v/1e6).toFixed(2)+' M';if(v>=1e3)return(v/1e3).toFixed(1)+' K';return Math.round(v).toLocaleString('fr');}
+function pct(a,b){return b?((a/b)*100).toFixed(1):'0.0';}
+
+/* ══ STATE ══ */
+let rawData=[],filteredData=[],totals={refs:0,qty:0,value:0};
+let sortCol='',sortDir=1;
+let activeAgeFilters = []; 
+let workbook=null;
+let darkTheme=true;
+let currentView='table';
+let currentMetric='value';
+let treeColumns=['ANX','GAMM','PROD'];
+let dragSrcIdx=null;
+
+const GAMM_CLS={
+  'ELECTRO':'g-electro','INFORMATIQUE':'g-info',
+  'TELEVISEUR ET AUDIO':'g-tv','MEUBLE':'g-meuble','PEM':'g-pem'
+};
+
+/* ══ THEME ══ */
+function toggleTheme(){
+  darkTheme=!darkTheme;
+  document.documentElement.setAttribute('data-theme',darkTheme?'':'light');
+  document.getElementById('theme-btn').textContent=darkTheme?'🌙':'☀️';
+  if(currentView==='tree')renderTree();
+}
+
+/* ══ VIEW SWITCH ══ */
+function switchView(v){
+  currentView=v;
+  document.getElementById('table-view').style.display=v==='table'?'block':'none';
+  document.getElementById('tree-view').style.display=v==='tree'?'flex':'none';
+  document.getElementById('tab-table').classList.toggle('active',v==='table');
+  document.getElementById('tab-tree').classList.toggle('active',v==='tree');
+  if(v==='tree'){renderColOrder();renderTree();}
+}
+
+/* ══ PARSE DATE ══ */
+function parseDate(v){
+  if(!v)return null;
+  if(v instanceof Date)return isNaN(v)?null:v;
+  if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400*1000));return isNaN(d)?null:d;}
+  const s=String(v).trim();
+  const p=s.split(/[\/\-\.]/);
+  if(p.length===3){
+    const d=p[0].length===4?new Date(`${p[0]}-${p[1]}-${p[2]}`):new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`);
+    return isNaN(d)?null:d;
+  }
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+
+/* ══ PROCESS ══ */
+function processData(rows){
+  const today=new Date();today.setHours(0,0,0,0);
+  return rows.map(r=>{
+    const date=parseDate(r['DrdateAchat']);
+    const ageDays=date?Math.floor((today-date)/86400000):null;
+    const lv=ageDays!==null?getLevel(ageDays):null;
+    const prix=parseFloat(r['DrPrixAchat'])||0;
+    const stock=parseInt(r['Stock'])||0;
+    return{...r,_date:date,ageDays,_lv:lv,valeur:prix*stock};
+  });
+}
+
+/* ══ LOAD SHEET ══ */
+function loadSheet(name){
+  const sheet=workbook.Sheets[name];
+  const json=XLSX.utils.sheet_to_json(sheet,{defval:''});
+  if(!json.length){alert('Feuille vide !');return;}
+  
+  // ── استخراج الملاحظات (Observations) من ملف الـ Excel إن وجدت ──
+  let obsUpdated = false;
+  json.forEach(r => {
+    // نبحث عن عمود اسمه observation أو OBSERVATION
+    const obsKey = Object.keys(r).find(k => k.trim().toLowerCase() === 'observation');
+    if (obsKey && r['REF']) {
+      const ref = String(r['REF']);
+      const obsVal = String(r[obsKey]).trim();
+      if (obsVal) {
+        observationsStore[ref] = obsVal;
+        obsUpdated = true;
+      }
+    }
+  });
+  
+  if(obsUpdated) {
+    localStorage.setItem('anx_obs_store', JSON.stringify(observationsStore));
+  }
+  // ───────────────────────────────────────────────────────────────
+
+  rawData=processData(json);
+  totals={refs:rawData.length,qty:rawData.reduce((s,r)=>s+(parseInt(r['Stock'])||0),0),value:rawData.reduce((s,r)=>s+r.valeur,0)};
+  buildAgeFilter();populateFilters();applyFilters();
+  document.getElementById('upload-screen').style.display='none';
+  document.getElementById('session-screen').style.display='none';
+  document.getElementById('dashboard').style.display='flex';
+
+  // Session bar setup
+  const sessBar = document.getElementById('sess-save-bar');
+  if (sessBar) sessBar.classList.add('visible');
+  const sessNameInputDash = document.getElementById('sess-save-name');
+  const uploadSessionName = document.getElementById('session-name-input');
+  const autoName = (uploadSessionName && uploadSessionName.value.trim()) || currentFileName.replace(/\.[^.]+$/,'') || 'Session';
+  if (sessNameInputDash) sessNameInputDash.value = autoName;
+  document.getElementById('sess-current-name').textContent = 'Non enregistrée';
+  document.getElementById('sess-auto-label').textContent = '';
+  currentSessionId = null;
+}
+
+/* ══ AGE FILTER ══ */
+function buildAgeFilter(){
+  const sel=document.getElementById('f-age');
+  if(!sel) return;
+  sel.innerHTML='<option value="">Toutes</option>';
+  AGE_LEVELS.forEach(lv=>sel.innerHTML+=`<option value="${lv.key}">${lv.icon} ${lv.label}</option>`);
+}
+
+/* ══ POPULATE FILTERS ══ */
+function populateFilters(){
+  const sets={ANX:new Set(),GAMM:new Set(),PROD:new Set(), OBS:new Set()};
+  
+  rawData.forEach(r=>{
+    if(r['ANX'])sets.ANX.add(String(r['ANX']).trim());
+    if(r['GAMM'])sets.GAMM.add(String(r['GAMM']).trim());
+    if(r['PROD'])sets.PROD.add(String(r['PROD']).trim());
+    
+    // جمع الملاحظات الحالية الخاصة بالمنتجات الموجودة لفلترتها
+    const ref = String(r['REF']||'');
+    const obs = observationsStore[ref];
+    if(obs) sets.OBS.add(obs);
+  });
+  
+  [['ANX','f-anx'],['GAMM','f-gamm'],['PROD','f-prod'],['OBS','f-obs']].forEach(([k,id])=>{
+    const sel=document.getElementById(id);
+    if(sel){
+      const currentVal = sel.value; // حفظ القيمة المحددة حالياً حتى لا تضيع عند التحديث
+      sel.innerHTML='<option value="">Toutes</option>';
+      [...sets[k]].sort().forEach(v=>{
+        const isSelected = (v === currentVal) ? 'selected' : '';
+        sel.innerHTML+=`<option value="${v}" ${isSelected}>${v}</option>`;
+      });
+    }
+  });
+}
+
+/* ══ APPLY FILTERS ══ */
+function applyFilters(){
+  const searchInput=(document.getElementById('f-search')?.value || '').toLowerCase().trim();
+  const anx=document.getElementById('f-anx')?.value;
+  const gamm=document.getElementById('f-gamm')?.value;
+  const prod=document.getElementById('f-prod')?.value;
+  const obsFilter=document.getElementById('f-obs')?.value; // فلتر الملاحظات
+  const period=document.getElementById('f-period')?.value;
+  const pMin=parseFloat(document.getElementById('f-price-min')?.value)||0;
+  const pMax=parseFloat(document.getElementById('f-price-max')?.value)||Infinity;
+  const sMin=parseInt(document.getElementById('f-stock-min')?.value)||0;
+  
+  filteredData=rawData.filter(r=>{
+    const ref = String(r['REF']||'');
+    
+    // 1. Search Filter
+    if(searchInput){
+      const rRef = ref.toLowerCase();
+      const rDes = String(r['designation']||'').toLowerCase();
+      
+      if(searchInput.includes('+')){
+        const parts = searchInput.split('+');
+        const sRef = parts[0].trim();
+        const sDes = parts[1].trim();
+        
+        if(sRef && !rRef.includes(sRef)) return false;
+        if(sDes && !rDes.includes(sDes)) return false;
+      } else {
+        if(!rRef.includes(searchInput) && !rDes.includes(searchInput)) return false;
+      }
+    }
+
+    // 2. Exact Match Filters
+    if(anx&&String(r['ANX']).trim()!==anx)return false;
+    if(gamm&&String(r['GAMM']).trim()!==gamm)return false;
+    if(prod&&String(r['PROD']).trim()!==prod)return false;
+    
+    // 3. Observation Filter
+    if(obsFilter){
+      const rowObs = observationsStore[ref] || '';
+      if(rowObs !== obsFilter) return false;
+    }
+    
+    // 4. Time & Price & Stock Filters
+    if(period&&r._date&&r._date.getFullYear()<parseInt(period))return false;
+    if(activeAgeFilters.length > 0 && (!r._lv || !activeAgeFilters.includes(r._lv.key))) return false;
+    const p=parseFloat(r['DrPrixAchat'])||0;
+    if(p<pMin||p>pMax)return false;
+    if((parseInt(r['Stock'])||0)<sMin)return false;
+    
+    return true;
+  });
+  
+  if(sortCol){
+    filteredData.sort((a,b)=>{
+      let va=a[sortCol],vb=b[sortCol];
+      if(va instanceof Date)return sortDir*(va-vb);
+      if(typeof va==='string')return sortDir*va.localeCompare(vb);
+      return sortDir*((va||0)-(vb||0));
+    });
+  }
+  updateKPIs();renderAgeDist();renderTable();
+  if(currentView==='tree')renderTree();
+}
+
+/* ══ KPIs ══ */
+function updateKPIs(){
+  const fRefs=filteredData.length;
+  const fQty=filteredData.reduce((s,r)=>s+(parseInt(r['Stock'])||0),0);
+  const fVal=filteredData.reduce((s,r)=>s+r.valeur,0);
+  const withAge=filteredData.filter(r=>r.ageDays!==null);
+  const avgAge=withAge.length?Math.round(withAge.reduce((s,r)=>s+r.ageDays,0)/withAge.length):0;
+  const oldest=withAge.length?withAge.reduce((a,b)=>a.ageDays>b.ageDays?a:b):null;
+  document.getElementById('kpi-refs').textContent=fRefs.toLocaleString('fr');
+  document.getElementById('kpi-refs-pct').textContent=pct(fRefs,totals.refs)+'% du total';
+  document.getElementById('kpi-qty').textContent=fQty.toLocaleString('fr');
+  document.getElementById('kpi-qty-pct').textContent=pct(fQty,totals.qty)+'% du stock';
+  document.getElementById('kpi-value').textContent=fmtNum(fVal);
+  document.getElementById('kpi-value-pct').textContent=pct(fVal,totals.value)+'% valeur';
+  document.getElementById('kpi-age').textContent=avgAge.toLocaleString('fr');
+  document.getElementById('kpi-age-label').textContent='jours · '+fmtAge(avgAge);
+  document.getElementById('kpi-oldest').textContent=oldest?fmtAge(oldest.ageDays):'–';
+  document.getElementById('kpi-oldest-ref').textContent=oldest?(oldest['REF']||'').slice(0,16):'–';
+  document.getElementById('count-filtered').textContent=fRefs.toLocaleString('fr');
+  document.getElementById('count-total').textContent=totals.refs.toLocaleString('fr');
+  document.getElementById('count-value').textContent=fVal.toLocaleString('fr');
+  document.getElementById('count-qty2').textContent=fQty.toLocaleString('fr');
+}
+
+/* ══ AGE DIST ══ */
+function renderAgeDist(){
+  const counts={};
+  AGE_LEVELS.forEach(lv=>counts[lv.key]=0);
+  rawData.forEach(r=>{if(r._lv)counts[r._lv.key]++;});
+  const total=rawData.length||1;
+  const bar=document.getElementById('age-dist-bar');
+  bar.querySelectorAll('.age-pill').forEach(p=>p.remove());
+  const pb=document.getElementById('progress-bar');
+  if(!pb) return;
+  pb.innerHTML='';
+  
+  AGE_LEVELS.forEach(lv=>{
+    if(!counts[lv.key])return;
+    const pill=document.createElement('div');
+    const isActive = activeAgeFilters.includes(lv.key); 
+    pill.className='age-pill'+(isActive ? ' active' : '');
+    pill.style.cssText=`color:${lv.color};background:${lv.bg};border-color:${lv.color}44`;
+    pill.innerHTML=`<span class="dot" style="background:${lv.color}"></span>${counts[lv.key]} ${lv.label}`;
+    pill.onclick=(e)=>filterByAge(lv.key, e); 
+    bar.insertBefore(pill,pb);
+    const seg=document.createElement('div');
+    seg.className='progress-seg';
+    seg.style.cssText=`width:${(counts[lv.key]/total*100).toFixed(1)}%;background:${lv.color}`;
+    pb.appendChild(seg);
+  });
+}
+
+/* ══ TABLE RENDER ══ */
+function renderTable(){
+  const tbody=document.getElementById('table-body');
+  if(!tbody) return;
+  if(!filteredData.length){
+    tbody.innerHTML=`<tr><td colspan="11"><div class="empty-state"><div class="icon">🔍</div><p>Aucun résultat</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=filteredData.map(r=>{
+    const prix=parseFloat(r['DrPrixAchat'])||0;
+    const stock=parseInt(r['Stock'])||0;
+    const valeur=prix*stock;
+    const dateStr=r._date?r._date.toLocaleDateString('fr-FR'):(r['DrdateAchat']||'–');
+    const lv=r._lv;
+    const gCls=GAMM_CLS[String(r['GAMM']||'').trim().toUpperCase()]||'g-other';
+    const ageTd=lv
+      ?`<span class="age-badge" style="background:${lv.bg};color:${lv.color}"><span class="dot" style="background:${lv.color}"></span>${lv.label}</span><span class="age-sub">${lv.icon} ${fmtAge(r.ageDays)}</span>`
+      :'–';
+      
+    const ref = String(r['REF'] || '');
+    const obsVal = observationsStore[ref] || '—';
+
+    return`<tr>
+      <td class="mono">${r['PROD']||''}</td>
+      <td class="mono primary">${ref}</td>
+      <td class="primary" style="max-width:280px;overflow:hidden;text-overflow:ellipsis" title="${String(r['designation']||'').replace(/"/g,'')}">${r['designation']||''}</td>
+      <td><span class="gamm-chip ${gCls}">${r['GAMM']||'–'}</span></td>
+      <td><span class="anx-chip">${r['ANX']||''}</span></td>
+      <td class="price-val">${prix.toLocaleString('fr')}</td>
+      <td><span class="stock-val">${stock}</span></td>
+      <td class="price-val">${valeur.toLocaleString('fr')}</td>
+      <td class="mono">${dateStr}</td>
+      <td>${ageTd}</td>
+      <td class="obs-cell" ondblclick="editObs('${ref.replace(/'/g, "\\'")}', this)">${obsVal}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══ SORT ══ */
+function sortBy(col,th){
+  sortDir=sortCol===col?-sortDir:1;
+  sortCol=col;
+  document.querySelectorAll('th').forEach(t=>{t.classList.remove('sorted');
+    const span = t.querySelector('span');
+    if(span) span.textContent=' ↕';
+  });
+  th.classList.add('sorted');
+  const span = th.querySelector('span');
+  if(span) span.textContent=sortDir===1?' ↑':' ↓';
+  applyFilters();
+}
+
+/* ══ HELPERS ══ */
+function filterByAge(key, e){
+  if (e && (e.ctrlKey || e.metaKey)) {
+    if (activeAgeFilters.includes(key)) {
+      activeAgeFilters = activeAgeFilters.filter(k => k !== key); 
+    } else {
+      activeAgeFilters.push(key); 
+    }
+  } else {
+    if (activeAgeFilters.length === 1 && activeAgeFilters[0] === key) {
+      activeAgeFilters = []; 
+    } else {
+      activeAgeFilters = [key]; 
+    }
+  }
+  const sel = document.getElementById('f-age');
+  if(sel) sel.value = activeAgeFilters.length === 1 ? activeAgeFilters[0] : "";
+  applyFilters();
+}
+
+function clearFilters(){
+  ['f-search','f-anx','f-gamm','f-prod','f-obs','f-age','f-period'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+  ['f-price-min','f-price-max','f-stock-min'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+  activeAgeFilters = []; 
+  applyFilters();
+}
+
+function resetDashboard(){
+  if(!confirm('Retourner à l\'écran des sessions ? Les modifications non sauvegardées seront perdues.')) return;
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('sess-save-bar').classList.remove('visible');
+  rawData=[];filteredData=[];workbook=null;
+  currentSessionId=null;currentFileName='';
+  const fileInput = document.getElementById('file-input');
+  if(fileInput) fileInput.value='';
+  goToSessions();
+}
+
+/* ═══════════════════════════════════════════
+   METRIC CONTROL
+═══════════════════════════════════════════ */
+function setMetric(m,btn){
+  currentMetric=m;
+  document.querySelectorAll('.metric-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTree();
+}
+
+/* ═══════════════════════════════════════════
+   COLUMN ORDER — DRAG & DROP
+═══════════════════════════════════════════ */
+function renderColOrder(){
+  const container=document.getElementById('col-order');
+  if(!container) return;
+  container.innerHTML='';
+  treeColumns.forEach((col,i)=>{
+    const chip=document.createElement('div');
+    chip.className='col-chip';
+    chip.draggable=true;
+    chip.dataset.idx=i;
+    chip.innerHTML=`<span class="drag-handle">⠿</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent2);margin-right:3px">${i+1}</span>${col}`;
+    chip.addEventListener('dragstart',e=>{dragSrcIdx=i;chip.classList.add('dragging');});
+    chip.addEventListener('dragend',()=>{chip.classList.remove('dragging');});
+    chip.addEventListener('dragover',e=>{e.preventDefault();});
+    chip.addEventListener('drop',e=>{
+      e.preventDefault();
+      const targetIdx=parseInt(chip.dataset.idx);
+      if(dragSrcIdx===null||dragSrcIdx===targetIdx)return;
+      const moved=treeColumns.splice(dragSrcIdx,1)[0];
+      treeColumns.splice(targetIdx,0,moved);
+      dragSrcIdx=null;
+      renderColOrder();
+      renderTree();
+    });
+    container.appendChild(chip);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   DECOMPOSITION TREE
+═══════════════════════════════════════════ */
+function getNodeValue(rows){
+  const qty=rows.reduce((s,r)=>s+(parseInt(r['Stock'])||0),0);
+  const value=rows.reduce((s,r)=>s+r.valeur,0);
+  return{qty,value};
+}
+
+function buildTree(rows,colIdx){
+  if(colIdx>=treeColumns.length)return null;
+  const col=treeColumns[colIdx];
+  const groups={};
+  rows.forEach(r=>{
+    let k=String(r[col]||'–').trim();
+    if(!k)k='–';
+    if(!groups[k])groups[k]=[];
+    groups[k].push(r);
+  });
+  return Object.entries(groups)
+    .map(([key,children])=>({
+      key,col,
+      ...getNodeValue(children),
+      children:buildTree(children,colIdx+1),
+      rows:children,
+    }))
+    .sort((a,b)=>b.value-a.value);
+}
+
+/* ─── LAYOUT CONSTANTS ─── */
+const NODE_W=180, NODE_H=64, H_GAP=60, V_GAP=20;
+
+function measureLayout(nodes){
+  if(!nodes||!nodes.length)return{w:0,h:0,nodes:[]};
+  let result=[];
+  let totalH=0;
+  nodes.forEach((n,i)=>{
+    let childLayout=null;
+    if(n.children&&n.children.length){
+      childLayout=measureLayout(n.children);
+    }
+    const selfH=NODE_H;
+    const childH=childLayout?childLayout.h:0;
+    const blockH=Math.max(selfH,childH);
+    result.push({node:n,childLayout,blockH,yStart:totalH});
+    totalH+=blockH+(i<nodes.length-1?V_GAP:0);
+  });
+  const childW=result.reduce((m,r)=>Math.max(m,r.childLayout?r.childLayout.w:0),0);
+  const selfW=NODE_W;
+  const totalW=selfW+(childW>0?H_GAP+childW:0);
+  return{w:totalW,h:totalH,items:result};
+}
+
+function renderTree(){
+  const container=document.getElementById('tree-svg-container');
+  if(!container) return;
+  if(!filteredData.length){
+    container.innerHTML='<div class="empty-state"><div class="icon">🌳</div><p>Aucune donnée</p></div>';
+    return;
+  }
+
+  const totalRows=filteredData;
+  const totalVal=totalRows.reduce((s,r)=>s+r.valeur,0)||1;
+  const totalQty=totalRows.reduce((s,r)=>s+(parseInt(r['Stock'])||0),0)||1;
+
+  const roots=buildTree(filteredData,0);
+  const layout=measureLayout(roots);
+
+  const PAD=24;
+  const ROOT_W=NODE_W;
+  const ROOT_H=NODE_H+16;
+  const totalW=PAD+ROOT_W+H_GAP+layout.w+PAD;
+  const totalH=PAD+Math.max(ROOT_H,layout.h)+PAD;
+
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('width','100%');
+  svg.setAttribute('viewBox',`0 0 ${totalW} ${totalH}`);
+  svg.style.display='block';
+
+  const bg=document.createElementNS(svgNS,'rect');
+  bg.setAttribute('width',totalW);bg.setAttribute('height',totalH);
+  bg.setAttribute('fill','transparent');
+  svg.appendChild(bg);
+
+  function mkEl(tag,attrs,txt){
+    const el=document.createElementNS(svgNS,tag);
+    Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
+    if(txt!==undefined)el.textContent=txt;
+    return el;
+  }
+
+  function truncate(str,maxLen){
+    return str.length>maxLen?str.slice(0,maxLen-1)+'…':str;
+  }
+
+  function metricLabel(v,q,parentV,parentQ){
+    let mainTxt='',subTxt='',barFill=1;
+    if(currentMetric==='value'){
+      mainTxt=fmtNum(v)+' DA';
+      subTxt=pct(v,totalVal)+'% total';
+      barFill=v/totalVal;
+    }else if(currentMetric==='qty'){
+      mainTxt=q.toLocaleString('fr')+' unités';
+      subTxt=pct(q,totalQty)+'% total';
+      barFill=q/totalQty;
+    }else{
+      const p=parentV?pct(v,parentV):pct(v,totalVal);
+      mainTxt=p+'%';
+      subTxt=fmtNum(v)+' DA';
+      barFill=parseFloat(p)/100;
+    }
+    return{mainTxt,subTxt,barFill:Math.min(1,Math.max(0,barFill))};
+  }
+
+  /* ─ ROOT NODE ─ */
+  const rootX=PAD, rootY=PAD;
+  const rootV=totalRows.reduce((s,r)=>s+r.valeur,0);
+  const rootQ=totalRows.reduce((s,r)=>s+(parseInt(r['Stock'])||0),0);
+
+  const rootG=document.createElementNS(svgNS,'g');
+  const rr=mkEl('rect',{x:rootX,y:rootY,width:ROOT_W,height:ROOT_H,rx:8,
+    fill:darkTheme?'#1a2540':'#e8f0fe',stroke:'var(--accent)',
+    'stroke-width':1.5});
+  rootG.appendChild(rr);
+
+  const rl=mkEl('text',{x:rootX+ROOT_W/2,y:rootY+14,
+    'text-anchor':'middle','dominant-baseline':'middle',
+    fill:darkTheme?'#00d4aa':'#0a5e40',
+    'font-family':'IBM Plex Mono,monospace','font-size':9,'font-weight':600,'letter-spacing':2,'text-transform':'uppercase'
+  },'STOCK GLOBAL');
+  rootG.appendChild(rl);
+
+  const rv=mkEl('text',{x:rootX+ROOT_W/2,y:rootY+33,
+    'text-anchor':'middle','dominant-baseline':'middle',
+    fill:darkTheme?'#e8ecf0':'#1a2233',
+    'font-family':'IBM Plex Mono,monospace','font-size':14,'font-weight':700
+  },fmtNum(rootV)+' DA');
+  rootG.appendChild(rv);
+
+  const rq=mkEl('text',{x:rootX+ROOT_W/2,y:rootY+50,
+    'text-anchor':'middle','dominant-baseline':'middle',
+    fill:darkTheme?'#8a95a3':'#4a5568',
+    'font-family':'IBM Plex Mono,monospace','font-size':10
+  },rootQ.toLocaleString('fr')+' unités · '+totalRows.length+' réf.');
+  rootG.appendChild(rq);
+  svg.appendChild(rootG);
+
+  /* ─ DRAW NODES ─ */
+  const LEVEL_COLORS=[
+    {stroke:darkTheme?'#0099ff':'#185FA5',fill:darkTheme?'#0d1f3c':'#E6F1FB',textFill:darkTheme?'#4fc3f7':'#0C447C'},
+    {stroke:darkTheme?'#00d4aa':'#0F6E56',fill:darkTheme?'#0d2a22':'#E1F5EE',textFill:darkTheme?'#00d4aa':'#085041'},
+    {stroke:darkTheme?'#ffb74d':'#854F0B',fill:darkTheme?'#2a1f0d':'#FAEEDA',textFill:darkTheme?'#ffb74d':'#633806'},
+  ];
+
+  function drawLevel(items,xOff,yOff,level,parentXEnd,parentYMid){
+    const lc=LEVEL_COLORS[Math.min(level,LEVEL_COLORS.length-1)];
+    const parentV=items.reduce((s,it)=>s+it.node.value,0)||1;
+    const parentQ=items.reduce((s,it)=>s+it.node.qty,0)||1;
+
+    items.forEach(it=>{
+      const{node,childLayout,blockH,yStart}=it;
+      const nodeY=yOff+yStart+(blockH-NODE_H)/2;
+      const nodeMidY=nodeY+NODE_H/2;
+      const nodeX=xOff;
+
+      if(parentXEnd!==undefined){
+        const edgePath=document.createElementNS(svgNS,'path');
+        const mx=(parentXEnd+nodeX)/2;
+        edgePath.setAttribute('d',`M${parentXEnd} ${parentYMid} C${mx} ${parentYMid} ${mx} ${nodeMidY} ${nodeX} ${nodeMidY}`);
+        edgePath.setAttribute('fill','none');
+        edgePath.setAttribute('stroke',darkTheme?'#252b35':'#c8d0db');
+        edgePath.setAttribute('stroke-width','1');
+        svg.insertBefore(edgePath,svg.firstChild.nextSibling);
+      }
+
+      const g=document.createElementNS(svgNS,'g');
+      g.style.cursor='pointer';
+
+      const rect=mkEl('rect',{x:nodeX,y:nodeY,width:NODE_W,height:NODE_H,rx:6,
+        fill:lc.fill,stroke:lc.stroke,'stroke-width':'0.8'});
+      g.appendChild(rect);
+
+      const labelTxt=truncate(node.key,20);
+      const label=mkEl('text',{x:nodeX+10,y:nodeY+16,
+        'dominant-baseline':'middle',
+        fill:lc.textFill,
+        'font-family':'Plus Jakarta Sans,sans-serif',
+        'font-size':11,'font-weight':600});
+      label.textContent=labelTxt;
+      g.appendChild(label);
+
+      const{mainTxt,subTxt,barFill}=metricLabel(node.value,node.qty,parentV,parentQ);
+
+      const mv=mkEl('text',{x:nodeX+10,y:nodeY+31,
+        'dominant-baseline':'middle',
+        fill:darkTheme?'#e8ecf0':'#1a2233',
+        'font-family':'IBM Plex Mono,monospace',
+        'font-size':11,'font-weight':700});
+      mv.textContent=mainTxt;
+      g.appendChild(mv);
+
+      const ms=mkEl('text',{x:nodeX+10,y:nodeY+44,
+        'dominant-baseline':'middle',
+        fill:darkTheme?'#8a95a3':'#4a5568',
+        'font-family':'IBM Plex Mono,monospace',
+        'font-size':9});
+      ms.textContent=subTxt+' · '+node.rows.length+' réf.';
+      g.appendChild(ms);
+
+      const barY=nodeY+NODE_H-5;
+      const barBg=mkEl('rect',{x:nodeX+6,y:barY,width:NODE_W-12,height:3,rx:2,
+        fill:darkTheme?'#252b35':'#dde2ea'});
+      g.appendChild(barBg);
+      const barFg=mkEl('rect',{x:nodeX+6,y:barY,width:Math.max(4,(NODE_W-12)*barFill),height:3,rx:2,
+        fill:lc.stroke});
+      g.appendChild(barFg);
+
+      svg.appendChild(g);
+
+      if(node.children&&node.children.length&&childLayout){
+        const childX=nodeX+NODE_W+H_GAP;
+        const childY=yOff+yStart;
+        drawLevel(childLayout.items,childX,childY,level+1,nodeX+NODE_W,nodeMidY);
+      }
+    });
+  }
+
+  const rootMidY=rootY+ROOT_H/2;
+  const rootEnd=rootX+ROOT_W;
+  const firstLevelX=rootEnd+H_GAP;
+  const firstLevelY=PAD+(Math.max(ROOT_H,layout.h)-layout.h)/2;
+
+  drawLevel(layout.items,firstLevelX,firstLevelY,0,rootEnd,rootMidY);
+
+  container.innerHTML='';
+  container.appendChild(svg);
+}
+
+/* ══ EXPORT EXCEL ══ */
+function exportExcel(){
+  if(!filteredData.length){alert('Aucune donnée.');return;}
+  showToast('Création Excel…');
+  setTimeout(()=>{
+    try{
+      const wb2=XLSX.utils.book_new();
+      const COLS=['PROD','REF','designation','GAMM','ANX','DrPrixAchat','Stock','Valeur (DA)','DrdateAchat','Âge (jours)','Catégorie âge','Statut détaillé', 'Observation'];
+      function toRows(data){return data.map(r=>{
+        const prix=parseFloat(r['DrPrixAchat'])||0,stock=parseInt(r['Stock'])||0;
+        const dateStr=r._date?r._date.toLocaleDateString('fr-FR'):(r['DrdateAchat']||'');
+        const ref=String(r['REF']||'');
+        return{'PROD':r['PROD']||'','REF':ref,'designation':r['designation']||'',
+          'GAMM':r['GAMM']||'','ANX':r['ANX']||'','DrPrixAchat':prix,'Stock':stock,
+          'Valeur (DA)':prix*stock,'DrdateAchat':dateStr,
+          'Âge (jours)':r.ageDays!==null?r.ageDays:'',
+          'Catégorie âge':r._lv?r._lv.label:'',
+          'Statut détaillé':r._lv?`${r._lv.icon} ${r._lv.label} — ${fmtAge(r.ageDays)}`:'',
+          'Observation': observationsStore[ref] || ''};
+      });}
+      const globalRows=toRows(filteredData);
+      const wsG=XLSX.utils.json_to_sheet(globalRows,{header:COLS});
+      wsG['!cols']=[10,18,40,18,8,14,8,16,12,12,18,28,25].map(w=>({wch:w}));
+      XLSX.utils.book_append_sheet(wb2,wsG,'GLOBAL');
+      const byAnx={};
+      filteredData.forEach(r=>{
+        const k=String(r['ANX']||'SANS_ANX').trim().replace(/[\\\/\?\*\[\]]/g,'_').slice(0,31);
+        if(!byAnx[k])byAnx[k]=[];
+        byAnx[k].push(r);
+      });
+      Object.entries(byAnx).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([anx,rows])=>{
+        const wsRows=toRows(rows);
+        const ws=XLSX.utils.json_to_sheet(wsRows,{header:COLS});
+        ws['!cols']=[10,18,40,18,8,14,8,16,12,12,18,28,25].map(w=>({wch:w}));
+        XLSX.utils.book_append_sheet(wb2,ws,`ANX_${anx}`);
+      });
+      const now=new Date();
+      const stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      XLSX.writeFile(wb2,`Stock_ANX_${stamp}.xlsx`);
+      showToast('✅ Export terminé !',2200);
+    }catch(e){console.error(e);showToast('❌ Erreur export',2500);}
+  },80);
+}
+
+function showToast(msg,hideAfter){
+  const t=document.getElementById('export-toast');
+  if(!t) return;
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  if(hideAfter)setTimeout(()=>t.classList.remove('show'),hideAfter);
+}
+
+/* ══ FILE UPLOAD ══ */
+function handleFile(file){
+  if(!file)return;
+  currentFileName = file.name;
+  const nameDisplay = document.getElementById('file-name-display');
+  if(nameDisplay) nameDisplay.textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const data=new Uint8Array(e.target.result);
+    workbook=XLSX.read(data,{type:'array',cellDates:false});
+    const names=workbook.SheetNames;
+    const sel=document.getElementById('sheet-select');
+    if(sel) {
+      sel.innerHTML=names.map(n=>`<option value="${n}">${n}</option>`).join('');
+      document.getElementById('sheet-selector').style.display='flex';
+      if(names.length===1)loadSheet(names[0]);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const fileInp = document.getElementById('file-input');
+if(fileInp) fileInp.addEventListener('change',e=>handleFile(e.target.files[0]));
+
+const loadBtn = document.getElementById('load-btn');
+if(loadBtn) loadBtn.addEventListener('click',()=>{
+  const s=document.getElementById('sheet-select').value;
+  if(s)loadSheet(s);
+});
+
+const dz=document.getElementById('drop-zone');
+if(dz) {
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{
+    e.preventDefault();dz.classList.remove('drag-over');
+    const f=e.dataTransfer.files[0];if(f)handleFile(f);
+  });
+}
+
+// ── Event Listeners ──
+const filterIds = ['f-anx','f-gamm','f-prod','f-period','f-obs'];
+filterIds.forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', applyFilters);
+});
+
+const searchEl = document.getElementById('f-search');
+if(searchEl) searchEl.addEventListener('input', applyFilters);
+
+const fAge = document.getElementById('f-age');
+if (fAge) {
+  fAge.addEventListener('change', (e) => {
+    activeAgeFilters = e.target.value ? [e.target.value] : [];
+    applyFilters();
+  });
+}
+
+['f-price-min','f-price-max','f-stock-min'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', applyFilters);
+});
+
+/* ═══════════════════════════════
+   EXPORT TREE / SVG TO IMAGE
+═══════════════════════════════ */
+function downloadChart(containerId){
+  const container = document.getElementById(containerId);
+  if(!container){
+    alert("Container introuvable");
+    return;
+  }
+
+  const originalSvg = container.querySelector("svg");
+  if(!originalSvg){
+    alert("Aucun graphique trouvé");
+    return;
+  }
+
+  showToast("📸 Création image...");
+
+  let exactWidth = 0;
+  let exactHeight = 0;
+  const viewBox = originalSvg.getAttribute('viewBox');
+  
+  if (viewBox) {
+    const parts = viewBox.split(' ');
+    exactWidth = parseFloat(parts[2]);
+    exactHeight = parseFloat(parts[3]);
+  } else {
+    const rect = originalSvg.getBoundingClientRect();
+    exactWidth = rect.width;
+    exactHeight = rect.height;
+  }
+
+  const cloneSvg = originalSvg.cloneNode(true);
+  cloneSvg.setAttribute('width', exactWidth);
+  cloneSvg.setAttribute('height', exactHeight);
+
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(cloneSvg);
+
+  if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+
+  img.onload = function(){
+    const canvas = document.createElement("canvas");
+    
+    const scale = 2; 
+    canvas.width = exactWidth * scale;
+    canvas.height = exactHeight * scale;
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = darkTheme ? "#0a0c10" : "#f4f6f9";
+    ctx.fillRect(0, 0, exactWidth, exactHeight);
+
+    ctx.drawImage(img, 0, 0, exactWidth, exactHeight);
+
+    const now = new Date();
+    const fileName = "Arbre_" +
+      now.getFullYear() +
+      String(now.getMonth()+1).padStart(2,"0") +
+      String(now.getDate()).padStart(2,"0") + "_" +
+      String(now.getHours()).padStart(2,"0") +
+      String(now.getMinutes()).padStart(2,"0") + ".png";
+
+    const link = document.createElement("a");
+    link.download = fileName;
+    link.href = canvas.toDataURL("image/png", 1.0);
+    link.click();
+
+    URL.revokeObjectURL(url);
+    showToast("✅ Image téléchargée", 2500);
+  };
+
+  img.onerror = function(){
+    showToast("❌ Erreur export image", 3000);
+  };
+
+  img.src = url;
+}
+</script>
+</body>
+</html>
